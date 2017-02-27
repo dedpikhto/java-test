@@ -2,6 +2,7 @@ package ru.summergirls;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Semaphore;
 
 /**
  * Created by vanderer on 26.02.17.
@@ -9,16 +10,18 @@ import java.util.concurrent.Callable;
 public class EmitRunnable implements Runnable
 {
     private TaskPool pool;
+    private Semaphore sem;
 
-    public EmitRunnable(TaskPool pool)
+    public EmitRunnable(TaskPool pool, Semaphore sem)
     {
         this.pool = pool;
+        this.sem = sem;
     }
 
     public void run()
     {
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 long secondsDelta = (long)(Math.random() * 1000);
 
                 LocalDateTime dt = LocalDateTime.now();
@@ -38,11 +41,15 @@ public class EmitRunnable implements Runnable
                     }
                 };
 
+                sem.acquire();
+
                 try {
                     pool.add(new EventItem(dt, callable));
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
                 }
+
+                sem.release();
 
                 System.out.println(Thread.currentThread().getName() + ", added");
 
